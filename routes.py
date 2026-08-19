@@ -1,9 +1,8 @@
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, flash
-from flask_login import login_user, logout_user, current_user, login_required
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
 from werkzeug.utils import secure_filename
 import os
 import PyPDF2
-from models import db, User, Task
+from models import db, Task
 
 routes = Blueprint('routes', __name__)
 
@@ -13,78 +12,38 @@ def init_routes(app):
 # --- MPA Routes ---
 
 @routes.route('/')
-@login_required
 def index():
     # Fetch root tasks (no parent) for the dashboard
-    tasks = Task.query.filter_by(user_id=current_user.id, parent_id=None).order_by(Task.created_at.desc()).all()
+    tasks = Task.query.filter_by(parent_id=None).order_by(Task.created_at.desc()).all()
     # Serialize for frontend injection
     tasks_data = [t.to_dict() for t in tasks]
     return render_template('index.html', tasks=tasks_data)
 
 @routes.route('/completed')
-@login_required
 def completed():
     return render_template('completed.html')
 
 @routes.route('/metrics')
-@login_required
 def metrics():
     return render_template('metrics.html')
 
 @routes.route('/settings')
-@login_required
 def settings():
     return render_template('settings.html')
 
-# --- Auth Routes ---
-
-@routes.route('/login', methods=['GET', 'POST'])
-def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('routes.index'))
-    if request.method == 'POST':
-        data = request.get_json() if request.is_json else request.form
-        username = data.get('username')
-        password = data.get('password')
-        user = User.query.filter_by(username=username).first()
-        if user is None or not user.check_password(password):
-            return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
-        login_user(user)
-        return jsonify({'success': True, 'redirect': url_for('routes.index')})
-    return render_template('login.html')
-
-@routes.route('/register', methods=['GET', 'POST'])
-def register():
-    if current_user.is_authenticated:
-        return redirect(url_for('routes.index'))
-    if request.method == 'POST':
-        data = request.get_json() if request.is_json else request.form
-        username = data.get('username')
-        password = data.get('password')
-        if User.query.filter_by(username=username).first():
-            return jsonify({'success': False, 'message': 'Username already exists'}), 400
-        user = User(username=username)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
-        login_user(user)
-        return jsonify({'success': True, 'redirect': url_for('routes.index')})
-    return render_template('register.html')
-
-@routes.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('routes.login'))
+@routes.route('/login')
+@routes.route('/register')
+def auth_placeholder():
+    # Redirect old auth routes to the main dashboard
+    return redirect(url_for('routes.index'))
 
 # --- API Routes ---
 
 @routes.route('/api/tasks', methods=['POST'])
-@login_required
 def create_task():
     data = request.get_json()
     task = Task(
         title=data['title'],
-        user_id=current_user.id,
         description=data.get('description', ''),
         parent_id=data.get('parent_id'),
         depends_on_id=data.get('depends_on_id')
@@ -98,9 +57,8 @@ def create_task():
     return jsonify(task.to_dict())
 
 @routes.route('/api/tasks/<int:id>', methods=['PUT', 'DELETE'])
-@login_required
 def update_task(id):
-    task = Task.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    task = Task.query.filter_by(id=id).first_or_404()
     if request.method == 'DELETE':
         db.session.delete(task)
         db.session.commit()
@@ -114,7 +72,6 @@ def update_task(id):
     return jsonify(task.to_dict())
 
 @routes.route('/api/upload', methods=['POST'])
-@login_required
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
@@ -146,7 +103,6 @@ def upload_file():
         # Create Parent Document Task
         parent_task = Task(
             title=f"Doc: {filename}",
-            user_id=current_user.id,
             attachment_url=filepath
         )
         db.session.add(parent_task)
@@ -156,28 +112,22 @@ def upload_file():
         for i, title in enumerate(extracted_titles):
             sub = Task(
                 title=title[:140],
-                user_id=current_user.id,
                 parent_id=parent_task.id,
                 estimated_time=15 * (i+1),
                 energy_weight='High' if len(title) > 50 else 'Medium'
             )
             # Make sequential dependencies for the DAG
             if i > 0:
-                # Need to flush to get previous ID if we were doing true sequential, 
-                # but for simplicity we'll just link it to the previously added sub.
                 db.session.flush()
-                # We can't easily link before commit without complex logic, 
-                # let's just make sub[1] depend on sub[0]
-                pass # skipping complex DAG init here, will do in expansion for demonstration
+                pass
             db.session.add(sub)
             
         db.session.commit()
         return jsonify(parent_task.to_dict())
 
 @routes.route('/api/tasks/<int:id>/expand', methods=['POST'])
-@login_required
 def expand_task(id):
-    parent = Task.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    parent = Task.query.filter_by(id=id).first_or_404()
     
     # Mock Expansion Pipeline
     steps = ["Environment Setup", "Execution Phase", "Deployment & Verification"]
@@ -187,7 +137,6 @@ def expand_task(id):
     for step in steps:
         sub = Task(
             title=f"{parent.title} - {step}",
-            user_id=current_user.id,
             parent_id=parent.id,
             estimated_time=30,
             energy_weight='High'
@@ -203,10 +152,9 @@ def expand_task(id):
     return jsonify({'parent_id': parent.id, 'new_subtasks': [s.to_dict() for s in new_subs]})
 
 @routes.route('/api/search', methods=['GET'])
-@login_required
 def search():
     q = request.args.get('q', '')
     if not q:
         return jsonify([])
-    tasks = Task.query.filter(Task.user_id == current_user.id, Task.title.ilike(f'%{q}%')).limit(5).all()
+    tasks = Task.query.filter(Task.title.ilike(f'%{q}%')).limit(5).all()
     return jsonify([t.to_dict() for t in tasks])

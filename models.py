@@ -19,7 +19,7 @@ class User(UserMixin, db.Model):
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     title = db.Column(db.String(140), nullable=False)
     description = db.Column(db.Text, nullable=True)
     status = db.Column(db.Boolean, default=False)
