@@ -33,6 +33,9 @@ window.onclick = function(event) {
 
 function toggleFloatingAI() {
     document.getElementById('aiChatWidget').classList.toggle('hidden');
+    if(!document.getElementById('aiChatWidget').classList.contains('hidden')) {
+        document.getElementById('aiChatInput').focus();
+    }
 }
 
 // Global Search FTS Logic
@@ -51,8 +54,8 @@ document.getElementById('globalSearchInput')?.addEventListener('input', async (e
         <div class="quick-action-item" onclick="previewResult('${item.snippet.replace(/'/g, "\\'")}')">
             <div class="action-icon">${item.icon || '📄'}</div>
             <div style="display:flex; flex-direction:column;">
-                <span style="font-weight:500">${item.canvas_title}</span>
-                <span style="font-size:11px; color:#888;">${item.snippet.substring(0, 50)}...</span>
+                <span style="font-weight:500; color: #fff;">${item.canvas_title}</span>
+                <span style="font-size:12px; color:#aaa;">${item.snippet.substring(0, 60)}...</span>
             </div>
         </div>
     `).join('');
@@ -61,8 +64,51 @@ document.getElementById('globalSearchInput')?.addEventListener('input', async (e
 function previewResult(snippet) {
     document.getElementById('searchPreviewPanel').innerHTML = `
         <div style="padding: 20px;">
-            <h3>Preview</h3>
-            <p style="margin-top: 10px; color: #ccc;">${snippet}</p>
+            <h3 style="color:#fff; margin-bottom: 12px;">Preview</h3>
+            <p style="color: #ccc; line-height: 1.5; font-size: 13px;">${snippet}</p>
         </div>
     `;
 }
+
+// Drag & Drop File Parsing
+const dropZone = document.getElementById('dropZone');
+let dragCounter = 0;
+
+document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dragCounter++;
+    if (dropZone) dropZone.classList.remove('hidden');
+});
+
+document.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0 && dropZone) {
+        dropZone.classList.add('hidden');
+    }
+});
+
+document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+});
+
+document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dragCounter = 0;
+    if (dropZone) dropZone.classList.add('hidden');
+    
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    
+    const formData = new FormData();
+    formData.append('file', files[0]);
+    
+    try {
+        // We'll map this to the AI upload endpoint later if implemented, 
+        // for now just simulate a visual feedback
+        console.log("File dropped:", files[0].name);
+        alert("File parsing initiated: " + files[0].name);
+    } catch(err) {
+        console.error(err);
+    }
+});
