@@ -1,16 +1,18 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="auth-container">
-    <div class="glass-card auth-card">
-        <h2 class="display-title">REGISTER</h2>
+<div class="centered-form-wrapper">
+    <div class="auth-box">
+        <h2 class="auth-title">Register</h2>
         <form id="registerForm" class="auth-form">
-            <input type="text" name="username" placeholder="Username" required class="glass-input">
-            <input type="password" name="password" placeholder="Password" required class="glass-input">
-            <button type="submit" class="cta-pill w-100">CREATE ↗</button>
+            <input type="text" name="username" placeholder="Username" required class="matte-input">
+            <input type="password" name="password" placeholder="Password" required class="matte-input">
+            <button type="submit" class="primary-btn w-100">Create Console Account</button>
         </form>
-        <p class="auth-link">Already have an account? <a href="{{ url_for('routes.login') }}">Login</a></p>
+        <p class="auth-link">Existing account? <a href="{{ url_for('routes.login') }}">Login</a></p>
     </div>
 </div>
+
 <script>
 document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();

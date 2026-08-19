@@ -1,9 +1,6 @@
-const { animate } = window.Motion;
-const defaultSpring = { type: 'spring', bounce: 0, duration: 0.4 };
-
 document.addEventListener('DOMContentLoaded', () => {
 
-    // 1. Sidebar Search (simulating Cmd+K but inline)
+    // 1. Search Logic
     const searchInput = document.getElementById('searchInput');
     const taskList = document.getElementById('taskList');
     
@@ -12,28 +9,16 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(async () => {
             const q = e.target.value;
-            if(q.length < 2) {
-                // Could restore original content here if needed, keeping simple for demo
-                return;
-            }
+            if(q.length < 2) return;
+            
             const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
             const tasks = await res.json();
             
-            // Simple render of search results in feed format
             if(taskList) {
                 taskList.innerHTML = tasks.map(t => `
-                    <div class="feed-card">
-                        <div class="card-header">
-                            <div class="user-meta">
-                                <div class="meta-text">
-                                    <span class="meta-name">Search Result</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-image-area" style="height: 150px;">
-                            <div class="simulated-image">
-                                <h2 class="task-title-large" style="font-size:20px;">${t.title}</h2>
-                            </div>
+                    <div class="task-card">
+                        <div class="card-body">
+                            <h2 class="task-title">${t.title}</h2>
                         </div>
                     </div>
                 `).join('') || '<div class="empty-state">No results found.</div>';
@@ -41,43 +26,39 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     });
 
-    // 2. Drag and Drop Upload Zone
-    const dropZone = document.getElementById('dropZone');
+    // 2. Strict Bounded Drag & Drop Zone
+    // We attach events to the mainContent area so the overlay stays bounded
+    const mainContent = document.getElementById('mainContent');
     const dropOverlay = document.getElementById('dropOverlay');
     const fileUpload = document.getElementById('fileUpload');
 
-    if(dropZone && dropOverlay) {
+    if(mainContent && dropOverlay) {
         let dragCounter = 0;
 
-        dropZone.addEventListener('dragenter', (e) => {
+        mainContent.addEventListener('dragenter', (e) => {
             e.preventDefault();
             dragCounter++;
             if(dragCounter === 1) {
                 dropOverlay.style.display = 'flex';
-                animate(dropOverlay, { opacity: 1 }, defaultSpring);
             }
         });
 
-        dropZone.addEventListener('dragover', (e) => {
+        mainContent.addEventListener('dragover', (e) => {
             e.preventDefault(); 
         });
 
-        dropZone.addEventListener('dragleave', (e) => {
+        mainContent.addEventListener('dragleave', (e) => {
             e.preventDefault();
             dragCounter--;
             if(dragCounter === 0) {
-                animate(dropOverlay, { opacity: 0 }, defaultSpring).finished.then(() => {
-                    dropOverlay.style.display = 'none';
-                });
+                dropOverlay.style.display = 'none';
             }
         });
 
-        dropZone.addEventListener('drop', (e) => {
+        mainContent.addEventListener('drop', (e) => {
             e.preventDefault();
             dragCounter = 0;
-            animate(dropOverlay, { opacity: 0 }, defaultSpring).finished.then(() => {
-                dropOverlay.style.display = 'none';
-            });
+            dropOverlay.style.display = 'none';
             
             if(e.dataTransfer.files.length) {
                 uploadFile(e.dataTransfer.files[0]);
@@ -109,33 +90,28 @@ async function uploadFile(file) {
     }
 }
 
-// Task Toggle (Heart/Like button in UI translation)
+// Main Task Toggle
 window.toggleTask = async function(id, el, currentStatus) {
     const newStatus = !currentStatus;
     
-    // Update SVG colors to emulate liking/completing
     const svg = el.querySelector('svg');
-    const count = el.querySelector('.count');
+    const path = svg.querySelector('path');
     
+    // Optimistic checkmark SVG state update
     if(newStatus) {
-        svg.setAttribute('fill', '#38BDF8');
-        svg.setAttribute('stroke', '#38BDF8');
-        count.innerText = "1";
+        svg.setAttribute('fill', '#0084ff');
+        svg.setAttribute('stroke', '#0084ff');
     } else {
         svg.setAttribute('fill', 'none');
-        svg.setAttribute('stroke', 'currentColor');
-        count.innerText = "0";
+        svg.setAttribute('stroke', '#666');
     }
     
-    // Check DAG
-    const allCards = document.querySelectorAll('.feed-card');
+    // DAG evaluation
+    const allCards = document.querySelectorAll('.task-card');
     allCards.forEach(card => {
         if(card.dataset.depends == id) {
-            if(newStatus) {
-                card.classList.remove('locked');
-            } else {
-                card.classList.add('locked');
-            }
+            if(newStatus) card.classList.remove('locked');
+            else card.classList.add('locked');
         }
     });
 
@@ -145,7 +121,6 @@ window.toggleTask = async function(id, el, currentStatus) {
         body: JSON.stringify({ status: newStatus })
     });
     
-    // Refresh to update title strikethroughs etc (or do it in DOM)
     window.location.reload();
 }
 
@@ -169,7 +144,7 @@ window.toggleSubtask = async function(id, el) {
     });
 }
 
-// Expand Task Pipeline
+// Expand Task
 window.expandTask = async function(id, btnEl) {
     const res = await fetch(`/api/tasks/${id}/expand`, {
         method: 'POST'
