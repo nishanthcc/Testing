@@ -1,57 +1,79 @@
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
+import uuid
 from datetime import datetime
+from database import db
+import json
 
-db = SQLAlchemy()
+def generate_uuid():
+    return str(uuid.uuid4())
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), index=True, unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    tasks = db.relationship('Task', backref='author', lazy='dynamic', cascade='all, delete-orphan')
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-class Task(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    title = db.Column(db.String(140), nullable=False)
-    description = db.Column(db.Text, nullable=True)
-    status = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+class Canvas(db.Model):
+    __tablename__ = 'canvases'
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    user_id = db.Column(db.Integer, nullable=True)
+    parent_id = db.Column(db.String(36), db.ForeignKey('canvases.id', ondelete='CASCADE'), nullable=True)
+    title = db.Column(db.String(255), nullable=False, default='Untitled')
+    icon = db.Column(db.String(255), nullable=True)
+    cover_image = db.Column(db.String(255), nullable=True)
+    is_matrix = db.Column(db.Boolean, default=False)
+    is_trashed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Hierarchical fields (for document extraction / expansion)
-    parent_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
-    subtasks = db.relationship('Task', foreign_keys=[parent_id], backref=db.backref('parent', remote_side=[id]), cascade='all, delete-orphan')
-    
-    # Attachments
-    attachment_url = db.Column(db.String(256), nullable=True)
-    
-    # ML & Statistical inference fields
-    estimated_time = db.Column(db.Integer, nullable=True) # minutes
-    energy_weight = db.Column(db.String(20), nullable=True) # e.g., 'High', 'Medium', 'Low'
-    
-    # Semantic Dependency Mapping (DAG)
-    depends_on_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
-    dependencies = db.relationship('Task', foreign_keys=[depends_on_id], backref=db.backref('blocks', remote_side=[id]))
+    nodes = db.relationship('Node', backref='canvas', lazy=True, cascade='all, delete-orphan')
+    sub_canvases = db.relationship('Canvas', backref=db.backref('parent', remote_side=[id]), cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
             'id': self.id,
             'title': self.title,
-            'description': self.description,
-            'status': self.status,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'parent_id': self.parent_id,
-            'attachment_url': self.attachment_url,
-            'estimated_time': self.estimated_time,
-            'energy_weight': self.energy_weight,
-            'depends_on_id': self.depends_on_id,
-            'is_locked': self.depends_on_id is not None and not Task.query.get(self.depends_on_id).status,
-            'subtasks': [t.to_dict() for t in self.subtasks]
+            'icon': self.icon,
+            'is_matrix': self.is_matrix,
+            'parent_id': self.parent_id
         }
+
+class Node(db.Model):
+    __tablename__ = 'nodes'
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    canvas_id = db.Column(db.String(36), db.ForeignKey('canvases.id', ondelete='CASCADE'), nullable=False)
+    parent_node_id = db.Column(db.String(36), db.ForeignKey('nodes.id', ondelete='CASCADE'), nullable=True)
+    type = db.Column(db.String(50), nullable=False, default='paragraph')
+    content = db.Column(db.Text, nullable=True)
+    properties = db.Column(db.Text, nullable=True) # JSON string
+    position = db.Column(db.Float, nullable=False, default=0.0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    sub_nodes = db.relationship('Node', backref=db.backref('parent_node', remote_side=[id]), cascade='all, delete-orphan')
+
+    def set_properties(self, props_dict):
+        self.properties = json.dumps(props_dict)
+
+    def get_properties(self):
+        return json.loads(self.properties) if self.properties else {}
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'canvas_id': self.canvas_id,
+            'parent_node_id': self.parent_node_id,
+            'type': self.type,
+            'content': self.content,
+            'properties': self.get_properties(),
+            'position': self.position
+        }
+
+class MatrixField(db.Model):
+    __tablename__ = 'matrix_fields'
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    matrix_canvas_id = db.Column(db.String(36), db.ForeignKey('canvases.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
+    type = db.Column(db.String(50), nullable=False)
+    config = db.Column(db.Text, nullable=True)
+    position = db.Column(db.Float, nullable=False)
+
+class MatrixValue(db.Model):
+    __tablename__ = 'matrix_values'
+    id = db.Column(db.String(36), primary_key=True, default=generate_uuid)
+    node_id = db.Column(db.String(36), db.ForeignKey('nodes.id', ondelete='CASCADE'), nullable=False)
+    field_id = db.Column(db.String(36), db.ForeignKey('matrix_fields.id', ondelete='CASCADE'), nullable=False)
+    value = db.Column(db.Text, nullable=True)
