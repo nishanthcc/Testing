@@ -27,7 +27,7 @@ class Task(db.Model):
     
     # Hierarchical fields (for document extraction / expansion)
     parent_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
-    subtasks = db.relationship('Task', backref=db.backref('parent', remote_side=[id]), cascade='all, delete-orphan')
+    subtasks = db.relationship('Task', foreign_keys=[parent_id], backref=db.backref('parent', remote_side=[id]), cascade='all, delete-orphan')
     
     # Attachments
     attachment_url = db.Column(db.String(256), nullable=True)
@@ -38,7 +38,7 @@ class Task(db.Model):
     
     # Semantic Dependency Mapping (DAG)
     depends_on_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True)
-    dependencies = db.relationship('Task', backref=db.backref('blocks', remote_side=[id]))
+    dependencies = db.relationship('Task', foreign_keys=[depends_on_id], backref=db.backref('blocks', remote_side=[id]))
 
     def to_dict(self):
         return {
