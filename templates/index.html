@@ -62,8 +62,60 @@
         {% endfor %}
     </div>
 
-    <div class="new-block-trigger" onclick="appendNewBlock()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New task
+    <div class="new-block-trigger" onclick="BlockEngine.appendNewBlock()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> New block
+    </div>
+</div>
+
+<!-- Floating Formatting Toolbar -->
+<div id="floatingFormatToolbar" class="floating-toolbar hidden">
+    <button class="format-btn" data-format="bold"><b>B</b></button>
+    <button class="format-btn" data-format="italic"><i>i</i></button>
+    <button class="format-btn" data-format="underline"><u>U</u></button>
+    <button class="format-btn" data-format="strike"><s>S</s></button>
+    <div class="toolbar-divider"></div>
+    <button class="format-btn" data-format="code"><code>&lt;&gt;</code></button>
+    <button class="format-btn" data-format="link">🔗</button>
+</div>
+
+<!-- Floating Slash Menu -->
+<div id="slashMenu" class="slash-menu hidden">
+    <div class="slash-menu-header">Basic blocks</div>
+    <div class="slash-menu-item active" data-type="paragraph">
+        <div class="slash-icon">¶</div>
+        <div class="slash-text">Text<span>Just start writing with plain text.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="h1">
+        <div class="slash-icon">H1</div>
+        <div class="slash-text">Heading 1<span>Big section heading.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="h2">
+        <div class="slash-icon">H2</div>
+        <div class="slash-text">Heading 2<span>Medium section heading.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="h3">
+        <div class="slash-icon">H3</div>
+        <div class="slash-text">Heading 3<span>Small section heading.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="checkbox">
+        <div class="slash-icon">☑️</div>
+        <div class="slash-text">To-do list<span>Track tasks with a to-do list.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="code">
+        <div class="slash-icon">&lt;&gt;</div>
+        <div class="slash-text">Code<span>Capture a code snippet.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="quote">
+        <div class="slash-icon">"</div>
+        <div class="slash-text">Quote<span>Capture a quote.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="divider">
+        <div class="slash-icon">―</div>
+        <div class="slash-text">Divider<span>Visually divide blocks.</span></div>
+    </div>
+    <div class="slash-menu-item" data-type="callout">
+        <div class="slash-icon">💡</div>
+        <div class="slash-text">Callout<span>Make writing stand out.</span></div>
     </div>
 </div>
 

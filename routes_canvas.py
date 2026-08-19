@@ -17,6 +17,19 @@ def get_canvases():
     canvases = Canvas.query.filter_by(is_trashed=False).all()
     return jsonify([c.to_dict() for c in canvases])
 
+@routes_canvas.route('/api/canvases/tree', methods=['GET'])
+def get_canvas_tree():
+    # Helper to recursively build tree
+    def build_tree(parent_id=None):
+        canvases = Canvas.query.filter_by(parent_id=parent_id, is_trashed=False).all()
+        tree = []
+        for c in canvases:
+            c_dict = c.to_dict()
+            c_dict['children'] = build_tree(c.id)
+            tree.append(c_dict)
+        return tree
+    return jsonify(build_tree())
+
 @routes_canvas.route('/api/canvases', methods=['POST'])
 def create_canvas():
     data = request.get_json()

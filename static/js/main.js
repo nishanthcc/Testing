@@ -112,3 +112,99 @@ document.addEventListener('drop', async (e) => {
         console.error(err);
     }
 });
+
+// Dynamic Sidebar Loading
+async function loadSidebarTree() {
+    try {
+        const res = await fetch('/api/canvases/tree');
+        const treeData = await res.json();
+        
+        const privateContainer = document.getElementById('privateTree');
+        if (!privateContainer) return;
+
+        function renderNodes(nodes, depth = 0) {
+            let html = '';
+            for (const node of nodes) {
+                html += \
+                    <div class="tree-item" style="padding-left: \px" onclick="loadCanvas('\')">
+                        <span class="tree-icon">\</span>
+                        <span class="tree-label">\</span>
+                    </div>
+                \;
+                if (node.children && node.children.length > 0) {
+                    html += renderNodes(node.children, depth + 1);
+                }
+            }
+            return html;
+        }
+
+        privateContainer.innerHTML = renderNodes(treeData);
+    } catch(err) {
+        console.error("Failed to load sidebar tree", err);
+    }
+}
+
+async function loadCanvas(canvasId) {
+    try {
+        const res = await fetch(\/api/canvases/\\);
+        const data = await res.json();
+        
+        // Update Title & Icon
+        document.querySelector('.page-title').textContent = data.title;
+        document.querySelector('.page-icon').textContent = data.icon || '📄';
+        
+        // Update Breadcrumb
+        const bc = document.querySelector('.breadcrumb');
+        if(bc) {
+            bc.innerHTML = \<span class="icon">\</span><span class="title">\</span>\;
+        }
+
+        // Render Nodes in Editor
+        const editor = document.getElementById('editorBlocks');
+        editor.innerHTML = '';
+        
+        for (const node of data.nodes) {
+            const el = document.createElement('div');
+            el.className = 'block-node';
+            el.setAttribute('data-id', node.id);
+            el.setAttribute('data-type', node.type);
+            
+            // Reconstruct block HTML based on type
+            let inner = '';
+            const text = node.content || '';
+            if (node.type === 'checkbox') {
+                const checked = (node.properties && node.properties.status === 'done') ? 'checked' : '';
+                inner = \<input type="checkbox" class="node-checkbox" \ onchange="toggleNodeStatus('\', this.checked)"><div class="content-editable" contenteditable="true">\</div>\;
+            } else if (node.type === 'code') {
+                inner = \<div class="code-wrapper"><div class="content-editable code-editable" contenteditable="true">\</div></div>\;
+            } else if (node.type === 'quote') {
+                inner = \<div class="quote-wrapper"><div class="content-editable" contenteditable="true">\</div></div>\;
+            } else if (node.type === 'callout') {
+                inner = \<div class="callout-wrapper"><span class="callout-icon">💡</span><div class="content-editable" contenteditable="true">\</div></div>\;
+            } else if (node.type === 'divider') {
+                inner = \<hr class="node-divider"><div class="content-editable hidden" contenteditable="true"></div>\;
+            } else {
+                inner = \<div class="content-editable node-\" contenteditable="true">\</div>\;
+            }
+
+            el.innerHTML = \
+                <div class="drag-handle">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                </div>
+                <div class="block-content">
+                    \
+                </div>
+            \;
+            editor.appendChild(el);
+        }
+        
+        // Re-bind editor context if needed
+        BlockEngine.canvasId = canvasId;
+    } catch(err) {
+        console.error("Failed to load canvas", err);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSidebarTree();
+});
