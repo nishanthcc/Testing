@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Widgets Sidebar -->
+    <aside class="widgets-panel">
+        <div class="glass-card widget">
+            <h3 class="widget-title">Weekly Progress</h3>
+            <div class="progress-ring-container">
+                <svg class="progress-ring" width="120" height="120">
+                    <circle class="progress-ring__circle" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="transparent" r="52" cx="60" cy="60"/>
+                    <circle class="progress-ring__fill" stroke="#38bdf8" stroke-width="8" fill="transparent" r="52" cx="60" cy="60" style="stroke-dasharray: 326.726; stroke-dashoffset: 100;"/>
+                </svg>
+                <div class="progress-text">64%</div>
+            </div>
+        </div>
+        
+        <div class="glass-card widget">
+            <h3 class="widget-title">Quick Actions</h3>
+            <div class="action-buttons">
+                <button class="fluid-btn" onclick="document.getElementById('fileUpload').click()">Upload Document ↗</button>
+                <input type="file" id="fileUpload" style="display: none;" accept=".pdf,.txt,.md">
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Editor/Task List -->
+    <section class="task-editor" id="dropZone">
+        <div class="editor-header">
+            <h1 class="display-title">ACTIVE PIPELINES</h1>
+            <p class="subtitle">Drag & drop documents anywhere to extract tasks.</p>
+        </div>
+
+        <!-- Drop Zone Overlay (Hidden by default) -->
+        <div id="dropOverlay" class="drop-overlay" style="display: none; opacity: 0;">
+            <div class="drop-content">
+                <h2 class="display-title">DROP TO EXTRACT</h2>
+                <p class="subtitle">PDF, MD, TXT supported</p>
+            </div>
+        </div>
+
+        <div class="task-list" id="taskList">
+            <!-- Tasks rendered via Jinja initially -->
+            {% for task in tasks %}
+                <div class="glass-card task-card {{ 'locked' if task.is_locked else '' }}" data-id="{{ task.id }}" data-depends="{{ task.depends_on_id or '' }}">
+                    <div class="task-card-header">
+                        <div class="checkbox {{ 'checked' if task.status else '' }}" onclick="toggleTask({{ task.id }}, this)"></div>
+                        <div class="task-title-group">
+                            <h3 class="task-title">{{ task.title }}</h3>
+                            {% if task.attachment_url %}
+                                <span class="tag source-tag">Doc</span>
+                            {% endif %}
+                        </div>
+                        <div class="task-actions">
+                            <button class="icon-btn expand-btn" onclick="expandTask({{ task.id }}, this)">Expand ⤓</button>
+                        </div>
+                    </div>
+                    
+                    <div class="task-metadata">
+                        {% if task.estimated_time %}
+                            <span class="micro-pill">{{ task.estimated_time }}m</span>
+                        {% endif %}
+                        {% if task.energy_weight %}
+                            <span class="micro-pill energy-{{ task.energy_weight|lower }}">{{ task.energy_weight }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Subtasks / Toggle List -->
+                    {% if task.subtasks %}
+                        <div class="subtask-list" id="subtasks-{{ task.id }}">
+                            {% for sub in task.subtasks %}
+                                <div class="glass-card task-card subtask-card" data-id="{{ sub.id }}">
+                                    <div class="task-card-header">
+                                        <div class="checkbox {{ 'checked' if sub.status else '' }}" onclick="toggleTask({{ sub.id }}, this)"></div>
+                                        <h4 class="task-title">{{ sub.title }}</h4>
+                                    </div>
+                                    <div class="task-metadata">
+                                        {% if sub.estimated_time %}
+                                            <span class="micro-pill">{{ sub.estimated_time }}m</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="subtask-list" id="subtasks-{{ task.id }}" style="display: none;"></div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

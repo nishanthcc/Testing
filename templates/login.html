@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-container">
+    <div class="glass-card auth-card">
+        <h2 class="display-title">LOGIN</h2>
+        <form id="loginForm" class="auth-form">
+            <input type="text" name="username" placeholder="Username" required class="glass-input">
+            <input type="password" name="password" placeholder="Password" required class="glass-input">
+            <button type="submit" class="cta-pill w-100">ENTER ↗</button>
+        </form>
+        <p class="auth-link">Don't have an account? <a href="{{ url_for('routes.register') }}">Register</a></p>
+    </div>
+</div>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    const res = await fetch('{{ url_for("routes.login") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    const json = await res.json();
+    if (json.success) {
+        window.location.href = json.redirect;
+    } else {
+        alert(json.message);
+    }
+});
+</script>
+{% endblock %}

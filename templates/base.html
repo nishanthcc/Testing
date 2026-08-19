@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;700&family=Space+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js"></script>
+</head>
+<body>
+    <!-- Ambient WebGL Depth Nodes (Simulated with CSS) -->
+    <div class="ambient-node node-1"></div>
+    <div class="ambient-node node-2"></div>
+    <div class="ambient-node node-3"></div>
+
+    <!-- Floating Navigation -->
+    <nav class="floating-nav">
+        <div class="nav-left">
+            <div class="avatar">
+                <span class="initials">NC</span>
+                <div class="status-dot"></div>
+            </div>
+            <span class="user-name">NISHANTH CHENNUPATI</span>
+        </div>
+        <div class="nav-center">
+            <span id="clock" class="clock-text">00:00:00 IST / ACTIVE SESSION</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('routes.index') }}" class="nav-link">TASKS</a>
+            <a href="{{ url_for('routes.completed') }}" class="nav-link">COMPLETED</a>
+            <a href="{{ url_for('routes.metrics') }}" class="nav-link">METRICS</a>
+            <a href="{{ url_for('routes.settings') }}" class="nav-link">SETTINGS</a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('routes.logout') }}" class="nav-link text-muted">LOGOUT</a>
+            {% endif %}
+            <button class="cta-pill" id="newTaskBtn">NEW TASK ↗</button>
+        </div>
+    </nav>
+
+    <!-- Global Cmd+K Search Modal (Hidden by default) -->
+    <div id="searchModal" class="search-modal" style="display: none; opacity: 0;">
+        <div class="search-modal-content">
+            <input type="text" id="searchInput" placeholder="Search tasks, documents, pipelines..." autocomplete="off">
+            <div id="searchResults" class="search-results"></div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
